@@ -6037,3 +6037,20 @@ g1_23206(::Tuple{Type{Int}, T}) where T = 0
 g2_23206(::Tuple{Type{Int}}) = 1
 @test_throws MethodError g1_23206(tuple(Int, 2))
 @test_throws MethodError g2_23206(tuple(Int, 2))
+
+# The old iteration protocol shims deprecation test
+struct DelegateIterator{T}
+    x::T
+end
+Base.start(itr::DelegateIterator) = start(itr.x)
+Base.next(itr::DelegateIterator, state) = next(itr.x, state)
+Base.done(itr::DelegateIterator, state) = done(itr.x, state)
+let A = [1], B = [], C = DelegateIterator([1]), D = DelegateIterator([]), E = Any[1,"abc"]
+    @test next(A, start(A))[1] == 1
+    @test done(A, next(A, start(A))[2])
+    @test done(B, start(B))
+    @test next(C, start(C))[1] == 1
+    @test done(C, next(C, start(C))[2])
+    @test done(D, start(D))
+    @test next(E, next(E, start(E))[2])[1] == "abc"
+end
