@@ -210,7 +210,7 @@ function _mapreducedim!(f, op, R::AbstractArray, A::AbstractArray)
     if has_fast_linear_indexing(A) && lsiz > 16
         # use mapreduce_impl, which is probably better tuned to achieve higher performance
         nslices = div(_length(A), lsiz)
-        ibase = first(linearindices(A))-1
+        ibase = first(LinearIndices(A))-1
         for i = 1:nslices
             @inbounds R[i] = op(R[i], mapreduce_impl(f, op, A, ibase+1, ibase+lsiz))
             ibase += lsiz
