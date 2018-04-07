@@ -362,8 +362,8 @@ function getindex(iter::LinearIndices{N,R}, i::Int) where {N,R}
     i
 end
 
-# Needed since these are defined in terms of LinearIndices
-firstindex(iter::LinearIndices) = 1
-firstindex(iter::LinearIndices{1}) = (@_inline_meta; first(iter.indices[1]))
-lastindex(iter::LinearIndices) = (@_inline_meta; length(iter))
-lastindex(iter::LinearIndices{1}) = (@_inline_meta; last(iter.indices[1]))
+# Needed since firstindex and lastindex are defined in terms of LinearIndices
+first(iter::LinearIndices) = 1
+first(iter::LinearIndices{1}) = (@_inline_meta; first(iter.indices[1]))
+last(iter::LinearIndices) = (@_inline_meta; length(iter))
+last(iter::LinearIndices{1}) = (@_inline_meta; last(iter.indices[1]))
