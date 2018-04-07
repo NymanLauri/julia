@@ -297,7 +297,8 @@ done(S::Slice, s) = done(S.indices, s)
     LinearIndices(A::AbstractArray)
 
 Return a `LinearIndices` array with the same shape and [`axes`](@ref) as `A`,
-mapping each entry in `A` to its linear index.
+holding the linear index of each entry in `A`. Indexing this array with
+cartesian indices allows mapping them to linear indices.
 
 For arrays with conventional indexing (indices start at 1), or any multidimensional
 array, linear indices range from 1 to `length(A)`. However, for `AbstractVector`s
@@ -321,8 +322,7 @@ julia> extrema(b)
     LinearIndices(sz::Dims) -> R
     LinearIndices(istart:istop, jstart:jstop, ...) -> R
 
-Return a `LinearIndices` array with the specified shape or [`axes`](@ref),
-mapping each cartesian index to a linear index.
+Return a `LinearIndices` array with the specified shape or [`axes`](@ref).
 
 # Example
 
@@ -361,3 +361,9 @@ function getindex(iter::LinearIndices{N,R}, i::Int) where {N,R}
     @boundscheck checkbounds(iter, i)
     i
 end
+
+# Needed since these are defined in terms of LinearIndices
+firstindex(iter::LinearIndices) = 1
+firstindex(iter::LinearIndices{1}) = (@_inline_meta; first(iter.indices[1]))
+lastindex(iter::LinearIndices) = (@_inline_meta; length(iter))
+lastindex(iter::LinearIndices{1}) = (@_inline_meta; last(iter.indices[1]))

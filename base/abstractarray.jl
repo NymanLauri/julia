@@ -162,8 +162,7 @@ julia> lastindex(rand(3,4,5), 2)
 4
 ```
 """
-lastindex(a::AbstractArray) = (@_inline_meta; _length(a))
-lastindex(a::AbstractVector) = (@_inline_meta; last(axes(a, 1)))
+lastindex(a::AbstractArray) = (@_inline_meta; last(LinearIndices(a)))
 lastindex(a::AbstractArray, d) = (@_inline_meta; last(axes(a, d)))
 
 """

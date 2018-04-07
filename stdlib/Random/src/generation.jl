@@ -340,7 +340,7 @@ end
 ## random values from AbstractArray
 
 Sampler(rng::AbstractRNG, r::AbstractArray, n::Repetition) =
-    SamplerSimple(r, Sampler(rng, LinearIndices(r), n))
+    SamplerSimple(r, Sampler(rng, firstindex(r):lastindex(r), n))
 
 rand(rng::AbstractRNG, sp::SamplerSimple{<:AbstractArray,<:Sampler}) =
     @inbounds return sp[][rand(rng, sp.data)]
