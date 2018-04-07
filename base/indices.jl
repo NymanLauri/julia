@@ -344,19 +344,20 @@ struct LinearIndices{N,R<:NTuple{N,AbstractUnitRange{Int}}} <: AbstractArray{Int
     indices::R
 end
 
-LinearIndices(::Tuple{}) = LinearIndices(CartesianIndices(()))
-LinearIndices(inds::NTuple{N,AbstractUnitRange{Int}}) where {N} = LinearIndices(CartesianIndices(inds))
-LinearIndices(inds::NTuple{N,AbstractUnitRange{<:Integer}}) where {N} = LinearIndices(CartesianIndices(inds))
-LinearIndices(index::CartesianIndex) = LinearIndices(CartesianIndices(index))
-LinearIndices(sz::NTuple{N,<:Integer}) where {N} = LinearIndices(CartesianIndices(sz))
-LinearIndices(inds::NTuple{N,Union{<:Integer,AbstractUnitRange{<:Integer}}}) where {N} = LinearIndices(CartesianIndices(inds))
-LinearIndices(A::AbstractArray) = LinearIndices(CartesianIndices(A))
+LinearIndices(::Tuple{}) = LinearIndices{0,typeof(())}(())
+LinearIndices(inds::NTuple{N,AbstractUnitRange{Int}}) where {N} = LinearIndices{N,typeof(inds)}(inds)
+LinearIndices(inds::NTuple{N,AbstractUnitRange{<:Integer}}) where {N} =
+    LinearIndices(map(r->convert(AbstractUnitRange{Int}, r), inds))
+LinearIndices(sz::NTuple{N,<:Integer}) where {N} = LinearIndices(map(Base.OneTo, sz))
+LinearIndices(inds::NTuple{N,Union{<:Integer,AbstractUnitRange{<:Integer}}}) where {N} =
+    LinearIndices(map(i->first(i):last(i), inds))
+LinearIndices(A::AbstractArray) = LinearIndices(axes(A))
 
 # AbstractArray implementation
-Base.IndexStyle(::Type{LinearIndices{N,R}}) where {N,R} = IndexLinear()
-Base.axes(iter::LinearIndices{N,R}) where {N,R} = iter.indices
-Base.size(iter::LinearIndices{N,R}) where {N,R} = length.(iter.indices)
-function Base.getindex(iter::LinearIndices{N,R}, i::Int) where {N,R}
+IndexStyle(::Type{LinearIndices{N,R}}) where {N,R} = IndexLinear()
+axes(iter::LinearIndices{N,R}) where {N,R} = iter.indices
+size(iter::LinearIndices{N,R}) where {N,R} = length.(iter.indices)
+function getindex(iter::LinearIndices{N,R}, i::Int) where {N,R}
     @boundscheck checkbounds(iter, i)
     i
 end
