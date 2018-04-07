@@ -423,7 +423,7 @@ This section lists changes that do not have deprecation warnings.
     `AbstractDict`, `AbstractString`, `Tuple` and `NamedTuple` objects ([#24774], [#25545]).
     In particular, this means that they use `CartesianIndex` objects for matrices
     and higher-dimensional arrays instead of linear indices as was previously the case.
-    Use `LinearIndices(a)[findall(f, a)]` and similar constructs to compute linear indices.
+    Use `linearindices(a)[findall(f, a)]` and similar constructs to compute linear indices.
 
   * The `find*` functions, i.e. `findnext`, `findprev`, `findfirst`,
     and `findlast`, as well as `indexin`, now return `nothing` when no match is found rather

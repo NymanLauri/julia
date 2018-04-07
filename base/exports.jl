@@ -29,6 +29,7 @@ export
     BitVector,
     CartesianIndex,
     CartesianIndices,
+    linearindices,
     LinearIndices,
     Channel,
     Cmd,

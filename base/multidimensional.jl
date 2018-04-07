@@ -11,7 +11,7 @@ module IteratorsMD
     using .Base: IndexLinear, IndexCartesian, AbstractCartesianIndex, fill_to_length, tail
     using .Base.Iterators: Reverse
 
-    export CartesianIndex, CartesianIndices, LinearIndices
+    export CartesianIndex, CartesianIndices, linearindices
 
     """
         CartesianIndex(i, j, k...)   -> I
@@ -494,7 +494,7 @@ show(io::IO, r::LogicalIndex) = print(io, "Base.LogicalIndex(", r.mask, ")")
 # keep track of the count of elements since we already know how many there
 # should be -- this way we don't need to look at future indices to check done.
 @inline function start(L::LogicalIndex{Int})
-    r = LinearIndices(L.mask)
+    r = linearindices(L.mask)
     return (r, start(r), 1)
 end
 @inline function start(L::LogicalIndex{<:CartesianIndex})
@@ -528,7 +528,7 @@ end
 @inline done(L::LogicalIndex{Int,<:BitArray}, s) = s[2] > length(L)
 
 @inline checkbounds(::Type{Bool}, A::AbstractArray, I::LogicalIndex{<:Any,<:AbstractArray{Bool,1}}) =
-    LinearIndices(A) == LinearIndices(I.mask)
+    linearindices(A) == linearindices(I.mask)
 @inline checkbounds(::Type{Bool}, A::AbstractArray, I::LogicalIndex) = axes(A) == axes(I.mask)
 @inline checkindex(::Type{Bool}, indx::AbstractUnitRange, I::LogicalIndex) = (indx,) == axes(I.mask)
 checkindex(::Type{Bool}, inds::Tuple, I::LogicalIndex) = false
@@ -669,8 +669,8 @@ function _accumulate_pairwise!(op::Op, c::AbstractVector{T}, v::AbstractVector, 
 end
 
 function accumulate_pairwise!(op::Op, result::AbstractVector, v::AbstractVector) where Op
-    li = LinearIndices(v)
-    li != LinearIndices(result) && throw(DimensionMismatch("input and output array sizes and indices must match"))
+    li = linearindices(v)
+    li != linearindices(result) && throw(DimensionMismatch("input and output array sizes and indices must match"))
     n = length(li)
     n == 0 && return result
     i1 = first(li)
@@ -1024,8 +1024,8 @@ end
 
 function _accumulate1!(op, B, v1, A::AbstractVector, dim::Integer)
     dim > 0 || throw(ArgumentError("dim must be a positive integer"))
-    inds = LinearIndices(A)
-    inds == LinearIndices(B) || throw(DimensionMismatch("LinearIndices of A and B don't match"))
+    inds = linearindices(A)
+    inds == linearindices(B) || throw(DimensionMismatch("LinearIndices of A and B don't match"))
     dim > 1 && return copyto!(B, A)
     i1 = inds[1]
     cur_val = v1
