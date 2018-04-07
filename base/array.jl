@@ -321,7 +321,7 @@ end
 function fill!(a::Array{T}, x) where T<:Union{Integer,AbstractFloat}
     @_noinline_meta
     xT = convert(T, x)
-    for i in eachindex(a)
+    for i in 1:length(a)
         @inbounds a[i] = xT
     end
     return a

@@ -23,9 +23,6 @@ function (::Type{T})(arg) where {T<:AbstractArray}
 end
 end
 
-linearindices(A::AbstractArray) = (@_inline_meta; OneTo(_length(A)))
-linearindices(A::AbstractVector) = (@_inline_meta; indices1(A))
-
 """
     size(A::AbstractArray, [dim...])
 
@@ -100,7 +97,7 @@ unsafe_indices(A) = axes(A)
 unsafe_indices(r::AbstractRange) = (OneTo(unsafe_length(r)),) # Ranges use checked_sub for size
 
 keys(a::AbstractArray) = CartesianIndices(axes(a))
-keys(a::AbstractVector) = linearindices(a)
+keys(a::AbstractVector) = LinearIndices(a)
 
 prevind(::AbstractArray, i::Integer) = Int(i)-1
 nextind(::AbstractArray, i::Integer) = Int(i)+1
@@ -165,7 +162,8 @@ julia> lastindex(rand(3,4,5), 2)
 4
 ```
 """
-lastindex(a::AbstractArray) = (@_inline_meta; last(linearindices(a)))
+lastindex(a::AbstractArray) = (@_inline_meta; _length(a))
+lastindex(a::AbstractVector) = (@_inline_meta; last(axes(a, 1)))
 lastindex(a::AbstractArray, d) = (@_inline_meta; last(axes(a, d)))
 
 """
@@ -183,7 +181,7 @@ julia> firstindex(rand(3,4,5), 2)
 1
 ```
 """
-firstindex(a::AbstractArray) = (@_inline_meta; first(linearindices(a)))
+firstindex(a::AbstractArray) = (@_inline_meta; first(LinearIndices(a)))
 firstindex(a::AbstractArray, d) = (@_inline_meta; first(axes(a, d)))
 
 first(a::AbstractArray) = a[first(eachindex(a))]
@@ -346,10 +344,15 @@ function checkbounds(::Type{Bool}, A::AbstractArray, I...)
     @_inline_meta
     checkbounds_indices(Bool, axes(A), I)
 end
+
+function checkbounds(::Type{Bool}, A::AbstractVector, i)
+    @_inline_meta
+    checkindex(Bool, indices1(A), i)
+end
 # Linear indexing is explicitly allowed when there is only one (non-cartesian) index
 function checkbounds(::Type{Bool}, A::AbstractArray, i)
     @_inline_meta
-    checkindex(Bool, linearindices(A), i)
+    checkindex(Bool, OneTo(_length(A)), i)
 end
 # As a special extension, allow using logical arrays that match the source array exactly
 function checkbounds(::Type{Bool}, A::AbstractArray{<:Any,N}, I::AbstractArray{Bool,N}) where N
@@ -609,7 +612,7 @@ function copyto!(dest::AbstractArray, dstart::Integer, src, sstart::Integer, n::
     n < 0 && throw(ArgumentError(string("tried to copy n=", n, " elements, but n should be nonnegative")))
     n == 0 && return dest
     dmax = dstart + n - 1
-    inds = linearindices(dest)
+    inds = LinearIndices(dest)
     if (dstart ∉ inds || dmax ∉ inds) | (sstart < 1)
         sstart < 1 && throw(ArgumentError(string("source start offset (",sstart,") is < 1")))
         throw(BoundsError(dest, dstart:dmax))
@@ -639,7 +642,7 @@ copyto!(dest::AbstractArray, src::AbstractArray) =
     copyto!(IndexStyle(dest), dest, IndexStyle(src), src)
 
 function copyto!(::IndexStyle, dest::AbstractArray, ::IndexStyle, src::AbstractArray)
-    destinds, srcinds = linearindices(dest), linearindices(src)
+    destinds, srcinds = LinearIndices(dest), LinearIndices(src)
     isempty(srcinds) || (first(srcinds) ∈ destinds && last(srcinds) ∈ destinds) ||
         throw(BoundsError(dest, srcinds))
     @inbounds for i in srcinds
@@ -649,7 +652,7 @@ function copyto!(::IndexStyle, dest::AbstractArray, ::IndexStyle, src::AbstractA
 end
 
 function copyto!(::IndexStyle, dest::AbstractArray, ::IndexCartesian, src::AbstractArray)
-    destinds, srcinds = linearindices(dest), linearindices(src)
+    destinds, srcinds = LinearIndices(dest), LinearIndices(src)
     isempty(srcinds) || (first(srcinds) ∈ destinds && last(srcinds) ∈ destinds) ||
         throw(BoundsError(dest, srcinds))
     i = 0
@@ -660,11 +663,11 @@ function copyto!(::IndexStyle, dest::AbstractArray, ::IndexCartesian, src::Abstr
 end
 
 function copyto!(dest::AbstractArray, dstart::Integer, src::AbstractArray)
-    copyto!(dest, dstart, src, first(linearindices(src)), _length(src))
+    copyto!(dest, dstart, src, first(LinearIndices(src)), _length(src))
 end
 
 function copyto!(dest::AbstractArray, dstart::Integer, src::AbstractArray, sstart::Integer)
-    srcinds = linearindices(src)
+    srcinds = LinearIndices(src)
     sstart ∈ srcinds || throw(BoundsError(src, sstart))
     copyto!(dest, dstart, src, sstart, last(srcinds)-sstart+1)
 end
@@ -674,7 +677,7 @@ function copyto!(dest::AbstractArray, dstart::Integer,
                n::Integer)
     n == 0 && return dest
     n < 0 && throw(ArgumentError(string("tried to copy n=", n, " elements, but n should be nonnegative")))
-    destinds, srcinds = linearindices(dest), linearindices(src)
+    destinds, srcinds = LinearIndices(dest), LinearIndices(src)
     (dstart ∈ destinds && dstart+n-1 ∈ destinds) || throw(BoundsError(dest, dstart:dstart+n-1))
     (sstart ∈ srcinds  && sstart+n-1 ∈ srcinds)  || throw(BoundsError(src,  sstart:sstart+n-1))
     @inbounds for i = 0:(n-1)
@@ -803,11 +806,11 @@ function eachindex(A::AbstractArray, B::AbstractArray...)
     @_inline_meta
     eachindex(IndexStyle(A,B...), A, B...)
 end
-eachindex(::IndexLinear, A::AbstractArray) = linearindices(A)
+eachindex(::IndexLinear, A::AbstractArray) = LinearIndices(A)
 function eachindex(::IndexLinear, A::AbstractArray, B::AbstractArray...)
     @_inline_meta
-    indsA = linearindices(A)
-    _all_match_first(linearindices, indsA, B...) || throw_eachindex_mismatch(IndexLinear(), A, B...)
+    indsA = LinearIndices(A)
+    _all_match_first(LinearIndices, indsA, B...) || throw_eachindex_mismatch(IndexLinear(), A, B...)
     indsA
 end
 function _all_match_first(f::F, inds, A, B...) where F<:Function
@@ -846,7 +849,7 @@ end
 pointer(x::AbstractArray{T}) where {T} = unsafe_convert(Ptr{T}, x)
 function pointer(x::AbstractArray{T}, i::Integer) where T
     @_inline_meta
-    unsafe_convert(Ptr{T}, x) + (i - first(linearindices(x)))*elsize(x)
+    unsafe_convert(Ptr{T}, x) + (i - first(LinearIndices(x)))*elsize(x)
 end
 
 ## Approach:
@@ -1960,7 +1963,7 @@ end
 @inline ith_all(i, as) = (as[1][i], ith_all(i, tail(as))...)
 
 function map_n!(f::F, dest::AbstractArray, As) where F
-    for i = linearindices(As[1])
+    for i = LinearIndices(As[1])
         dest[i] = f(ith_all(i, As)...)
     end
     return dest
