@@ -61,7 +61,7 @@ function issorted(itr, order::Ordering)
     prev, state = next(itr, state)
     while !done(itr, state)
         this, state = next(itr, state)
-        lt(order, this, prev) && return false
+        order(this, prev) && return false
         prev = this
     end
     return true
@@ -173,7 +173,7 @@ function searchsortedfirst(v::AbstractVector, x, lo::Int, hi::Int, o::Ordering)
     hi = hi+1
     @inbounds while lo < hi-1
         m = (lo+hi)>>>1
-        if lt(o, v[m], x)
+        if o(v[m], x)
             lo = m
         else
             hi = m
@@ -189,7 +189,7 @@ function searchsortedlast(v::AbstractVector, x, lo::Int, hi::Int, o::Ordering)
     hi = hi+1
     @inbounds while lo < hi-1
         m = (lo+hi)>>>1
-        if lt(o, x, v[m])
+        if o(x, v[m])
             hi = m
         else
             lo = m
@@ -206,9 +206,9 @@ function searchsorted(v::AbstractVector, x, ilo::Int, ihi::Int, o::Ordering)
     hi = ihi+1
     @inbounds while lo < hi-1
         m = (lo+hi)>>>1
-        if lt(o, v[m], x)
+        if o(v[m], x)
             lo = m
-        elseif lt(o, x, v[m])
+        elseif o(x, v[m])
             hi = m
         else
             a = searchsortedfirst(v, x, max(lo,ilo), m, o)
@@ -221,25 +221,25 @@ end
 
 function searchsortedlast(a::AbstractRange{<:Real}, x::Real, o::DirectOrdering)
     if step(a) == 0
-        lt(o, x, first(a)) ? 0 : length(a)
+        o(x, first(a)) ? 0 : length(a)
     else
         n = round(Integer, clamp((x - first(a)) / step(a) + 1, 1, length(a)))
-        lt(o, x, a[n]) ? n - 1 : n
+        o(x, a[n]) ? n - 1 : n
     end
 end
 
 function searchsortedfirst(a::AbstractRange{<:Real}, x::Real, o::DirectOrdering)
     if step(a) == 0
-        lt(o, first(a), x) ? length(a) + 1 : 1
+        o(first(a), x) ? length(a) + 1 : 1
     else
         n = round(Integer, clamp((x - first(a)) / step(a) + 1, 1, length(a)))
-        lt(o, a[n] ,x) ? n + 1 : n
+        o(a[n] ,x) ? n + 1 : n
     end
 end
 
 function searchsortedlast(a::AbstractRange{<:Integer}, x::Real, o::DirectOrdering)
     if step(a) == 0
-        lt(o, x, first(a)) ? 0 : length(a)
+        o(x, first(a)) ? 0 : length(a)
     else
         clamp( fld(floor(Integer, x) - first(a), step(a)) + 1, 0, length(a))
     end
@@ -247,14 +247,14 @@ end
 
 function searchsortedfirst(a::AbstractRange{<:Integer}, x::Real, o::DirectOrdering)
     if step(a) == 0
-        lt(o, first(a), x) ? length(a)+1 : 1
+        o(first(a), x) ? length(a)+1 : 1
     else
         clamp(-fld(floor(Integer, -x) + first(a), step(a)) + 1, 1, length(a) + 1)
     end
 end
 
 function searchsortedfirst(a::AbstractRange{<:Integer}, x::Unsigned, o::DirectOrdering)
-    if lt(o, first(a), x)
+    if o(first(a), x)
         if step(a) == 0
             length(a) + 1
         else
@@ -266,7 +266,7 @@ function searchsortedfirst(a::AbstractRange{<:Integer}, x::Unsigned, o::DirectOr
 end
 
 function searchsortedlast(a::AbstractRange{<:Integer}, x::Unsigned, o::DirectOrdering)
-    if lt(o, x, first(a))
+    if o(x, first(a))
         0
     elseif step(a) == 0
         length(a)
@@ -384,7 +384,7 @@ function sort!(v::AbstractVector, lo::Int, hi::Int, ::InsertionSortAlg, o::Order
         j = i
         x = v[i]
         while j > lo
-            if lt(o, x, v[j-1])
+            if o(x, v[j-1])
                 v[j] = v[j-1]
                 j -= 1
                 continue
@@ -410,11 +410,11 @@ end
 
         # sort the values in v[lo], v[mi], v[hi]
 
-        if lt(o, v[mi], v[lo])
+        if o(v[mi], v[lo])
             v[mi], v[lo] = v[lo], v[mi]
         end
-        if lt(o, v[hi], v[mi])
-            if lt(o, v[hi], v[lo])
+        if o(v[hi], v[mi])
+            if o(v[hi], v[lo])
                 v[lo], v[mi], v[hi] = v[hi], v[lo], v[mi]
             else
                 v[hi], v[mi] = v[mi], v[hi]
@@ -440,8 +440,8 @@ function partition!(v::AbstractVector, lo::Int, hi::Int, o::Ordering)
     i, j = lo, hi
     @inbounds while true
         i += 1; j -= 1
-        while lt(o, v[i], pivot); i += 1; end;
-        while lt(o, pivot, v[j]); j -= 1; end;
+        while o(v[i], pivot); i += 1; end;
+        while o(pivot, v[j]); j -= 1; end;
         i >= j && break
         v[i], v[j] = v[j], v[i]
     end
@@ -490,7 +490,7 @@ function sort!(v::AbstractVector, lo::Int, hi::Int, a::MergeSortAlg, o::Ordering
 
         i, k = 1, lo
         while k < j <= hi
-            if lt(o, v[j], t[i])
+            if o(v[j], t[i])
                 v[k] = v[j]
                 j += 1
             else
@@ -1002,7 +1002,7 @@ using ..Base: @inbounds, AbstractVector, Vector, last, axes
 
 import Core.Intrinsics: slt_int
 import ..Sort: sort!
-import ...Order: lt, DirectOrdering
+import ...Order: DirectOrdering
 
 const Floats = Union{Float32,Float64}
 
@@ -1015,8 +1015,8 @@ right(::DirectOrdering) = Right()
 left(o::Perm) = Perm(left(o.order), o.data)
 right(o::Perm) = Perm(right(o.order), o.data)
 
-lt(::Left, x::T, y::T) where {T<:Floats} = slt_int(y, x)
-lt(::Right, x::T, y::T) where {T<:Floats} = slt_int(x, y)
+Left(x::T, y::T) where {T<:Floats} = slt_int(y, x)
+Right(x::T, y::T) where {T<:Floats} = slt_int(x, y)
 
 isnan(o::DirectOrdering, x::Floats) = (x!=x)
 isnan(o::Perm, i::Int) = isnan(o.order,o.data[i])
@@ -1057,8 +1057,8 @@ nans2end!(v::AbstractVector, o::ReverseOrdering) = nans2left!(v,o)
 nans2end!(v::AbstractVector{Int}, o::Perm{<:ForwardOrdering}) = nans2right!(v,o)
 nans2end!(v::AbstractVector{Int}, o::Perm{<:ReverseOrdering}) = nans2left!(v,o)
 
-issignleft(o::ForwardOrdering, x::Floats) = lt(o, x, zero(x))
-issignleft(o::ReverseOrdering, x::Floats) = lt(o, x, -zero(x))
+issignleft(o::ForwardOrdering, x::Floats) = o(x, zero(x))
+issignleft(o::ReverseOrdering, x::Floats) = o(x, -zero(x))
 issignleft(o::Perm, i::Int) = issignleft(o.order, o.data[i])
 
 function fpsort!(v::AbstractVector, a::Algorithm, o::Ordering)

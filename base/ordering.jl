@@ -12,33 +12,24 @@ import .Base:
 ## notions of element ordering ##
 
 export # not exported by Base
-    Ordering, Forward, Reverse,
-    By, Lt, Perm,
+    Ordering, Forward, Reverse, Backward,
+    By, Less, Perm,
     ReverseOrdering, ForwardOrdering,
-    DirectOrdering,
-    lt, ord, ordtype
+    DirectOrdering
 
 abstract type Ordering end
 
-struct ForwardOrdering <: Ordering end
-struct ReverseOrdering{Fwd<:Ordering} <: Ordering
-    fwd::Fwd
+struct Less{T<:Function} <: Ordering
+    is_less::T
 end
 
-ReverseOrdering(rev::ReverseOrdering) = rev.fwd
-ReverseOrdering(fwd::Fwd) where {Fwd} = ReverseOrdering{Fwd}(fwd)
-
-const DirectOrdering = Union{ForwardOrdering,ReverseOrdering{ForwardOrdering}}
-
-const Forward = ForwardOrdering()
-const Reverse = ReverseOrdering(Forward)
-
-struct By{T} <: Ordering
+struct By{T,O<:Ordering} <: Ordering
     by::T
+    is_less::O
 end
 
-struct Lt{T} <: Ordering
-    lt::T
+struct Reverse{O<:Ordering} <: Ordering
+    is_less::O
 end
 
 struct Perm{O<:Ordering,V<:AbstractVector} <: Ordering
@@ -46,33 +37,29 @@ struct Perm{O<:Ordering,V<:AbstractVector} <: Ordering
     data::V
 end
 
-lt(o::ForwardOrdering,       a, b) = isless(a,b)
-lt(o::ReverseOrdering,       a, b) = lt(o.fwd,b,a)
-lt(o::By,                    a, b) = isless(o.by(a),o.by(b))
-lt(o::Lt,                    a, b) = o.lt(a,b)
+# Simplify some things
+Reverse(ord::Reverse) = ord.is_less
+By(by::typeof(identity), ord::Ordering) = ord
 
-@propagate_inbounds function lt(p::Perm, a::Integer, b::Integer)
-    da = p.data[a]
-    db = p.data[b]
-    lt(p.order, da, db) | (!lt(p.order, db, da) & (a < b))
-end
 
-ordtype(o::ReverseOrdering, vs::AbstractArray) = ordtype(o.fwd, vs)
-ordtype(o::Perm,            vs::AbstractArray) = ordtype(o.order, o.data)
-# TODO: here, we really want the return type of o.by, without calling it
-ordtype(o::By,              vs::AbstractArray) = try typeof(o.by(vs[1])) catch; Any end
-ordtype(o::Ordering,        vs::AbstractArray) = eltype(vs)
+(o::Less)(a, b)    = o.is_less(a, b)
+(o::By)(a, b)      = o.is_less(o.by(a), o.by(b))
+(o::Reverse)(a, b) = o.is_less(b, a)
 
-_ord(lt::typeof(isless), by::typeof(identity), order::Ordering) = order
-_ord(lt::typeof(isless), by,                   order::Ordering) = By(by)
-_ord(lt,                 by::typeof(identity), order::Ordering) = Lt(lt)
-_ord(lt,                 by,                   order::Ordering) = Lt((x,y)->lt(by(x),by(y)))
+const Forward = Less(isless)
+const ForwardOrdering = typeof(Forward)
+const Backward = Reverse(Forward)
+const BackwardOrdering = typeof(Backward)
+const DirectOrdering = Union{ForwardOrdering,BackwardOrdering}
+
+_ord(lt, by, order::ForwardOrdering) = By(by,Less(lt))
+_ord(lt, by, order::BackwardOrdering) = Reverse(By(by,Less(lt)))
 
 ord(lt, by, rev::Nothing, order::Ordering=Forward) = _ord(lt, by, order)
 
 function ord(lt, by, rev::Bool, order::Ordering=Forward)
     o = _ord(lt, by, order)
-    return rev ? ReverseOrdering(o) : o
+    return rev ? Reverse(o) : o
 end
 
 end

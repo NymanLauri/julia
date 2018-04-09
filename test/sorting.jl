@@ -7,6 +7,13 @@ using Random
 @test sort([2,3,1], rev=true) == [3,2,1]
 @test sort(['z':-1:'a';]) == ['a':'z';]
 @test sort(['a':'z';], rev=true) == ['z':-1:'a';]
+@test sort([2,3,1]) == [1,2,3]
+@test sort!([2,3,1], by = identity, order = Base.Order.Forward, rev = false) == [1,2,3]
+@test sort!([2,3,1], by = abs, order = Base.Order.Forward, rev = false) == [1,2,3]
+@test sort!([-2,3,1], lt = isless, by = abs, order = Base.Order.Forward, rev = false) == [1,-2,3]
+@test sort!([2,3,1], by = abs, order = Base.Order.Backward, rev = false) == [3,2,1]
+@test sort!([2,3,1], by = abs, order = Base.Order.Forward, rev = true) == [3,2,1]
+@test sort!([2,3,1], by = abs, order = Base.Order.Backward, rev = true) == [1,2,3]
 @test sortperm([2,3,1]) == [3,1,2]
 @test sortperm!([1,2,3], [2,3,1]) == [3,1,2]
 let s = view([1,2,3,4], 1:3),
